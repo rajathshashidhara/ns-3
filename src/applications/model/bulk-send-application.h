@@ -100,6 +100,10 @@ class BulkSendApplication : public Application
      */
     void SetMaxBytes(uint64_t maxBytes);
 
+    void SetSendSize(uint32_t sendSize);
+
+    void SetSocket(Ptr<Socket> socket);
+
     /**
      * \brief Get the socket this application is attached to.
      * \return pointer to associated socket

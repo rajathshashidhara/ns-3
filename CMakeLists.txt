@@ -85,7 +85,7 @@ option(NS3_VERBOSE "Print additional build system messages" OFF)
 option(NS3_VISUALIZER "Build visualizer module" ON)
 option(NS3_WARNINGS "Enable compiler warnings" ON)
 option(NS3_WARNINGS_AS_ERRORS
-       "Treat warnings as errors. Requires NS3_WARNINGS=ON" ON
+       "Treat warnings as errors. Requires NS3_WARNINGS=ON" OFF
 )
 
 # Options that either select which modules will get built or disable modules

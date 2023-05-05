@@ -113,6 +113,19 @@ BulkSendApplication::SetMaxBytes(uint64_t maxBytes)
     m_maxBytes = maxBytes;
 }
 
+void
+BulkSendApplication::SetSocket(Ptr<Socket> socket)
+{
+    m_socket = socket;
+    m_connected = true;
+}
+
+void
+BulkSendApplication::SetSendSize(uint32_t sendSize)
+{
+    m_sendSize = sendSize;
+}
+
 Ptr<Socket>
 BulkSendApplication::GetSocket() const
 {
