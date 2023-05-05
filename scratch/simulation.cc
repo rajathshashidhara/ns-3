@@ -130,27 +130,44 @@ main(int argc, char* argv[])
     socket->Bind(anyAddress);
     socket->Connect(InetSocketAddress(i.GetAddress(1), port));
 
+    // TODO look at GH to see how they simulate datacenter flows
+    // TODO add parameter to TcpRxBuffer to include a parameter for SACK
+    // TODO add trace to m_dataRetrCount for re-transmissions
+
+
     //
     // Create a SendBulkApplication and install it on node 0.
     //
-    Ptr<BulkSendApplication> source = CreateObject<BulkSendApplication>();
-    source->SetMaxBytes(max_bytes);
-    source->SetSendSize(send_size);
-    source->SetSocket(socket);
-    nodes.Get(0)->AddApplication(source);
-    source->SetStartTime(Seconds(0.0));
-    source->SetStopTime(Seconds(10.0));
+
+    // Don't use Helper
+
+    // Ptr<BulkSendApplication> source = CreateObject<BulkSendApplication>();
+    // source->SetMaxBytes(max_bytes);
+    // source->SetSendSize(send_size);
+    // source->SetSocket(socket);
+    // nodes.Get(0)->AddApplication(source);
+    // source->SetStartTime(Seconds(0.0));
+    // source->SetStopTime(Seconds(10.0));
     
+    // Use Helper
+
+    BulkSendHelper source("ns3::TcpSocketFactory", InetSocketAddress(i.GetAddress(1), port));
+    // Set the amount of data to send in bytes.  Zero is unlimited.
+    source.SetAttribute("MaxBytes", UintegerValue(max_bytes));
+    source.SetAttribute("SendSize", UintegerValue(send_size));
+    ApplicationContainer sourceApps = source.Install(nodes.Get(0));
+    DynamicCast<BulkSendApplication>(sourceApps.Get(0))->SetSocket(socket);
+    sourceApps.Start(Seconds(0.0));
+    sourceApps.Stop(Seconds(10.0));
+
+
+    // Trace
 
     // AsciiTraceHelper ascii;
     // Ptr<OutputStreamWrapper> stream = ascii.CreateFileStream("fct.tr");
     // ns3TcpSocket->TraceConnectWithoutContext("HighestSequence", MakeBoundCallback(&SendTrace, stream));
     // ns3TcpSocket->TraceConnectWithoutContext("HighestRxAck", MakeBoundCallback(&RecvTrace, stream));
-    // // TODO install trace on m_dataRetrCount in ns3TcpSocket to trace retransmissions
-    // // TODO "Since the maximum blocks that fits into a TCP header are 4, there's no point on maintaining the others."
 
-
-    // // Ptr<OutputStreamWrapper> stream = ascii.CreateFileStream("retransmission.tr");
 
     //
     // Create a PacketSinkApplication and install it on node 1
