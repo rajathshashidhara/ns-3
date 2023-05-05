@@ -227,7 +227,6 @@ void
 BulkSendApplication::SendData(const Address& from, const Address& to)
 {
     NS_LOG_FUNCTION(this);
-
     while (m_maxBytes == 0 || m_totBytes < m_maxBytes)
     { // Time to send more
 

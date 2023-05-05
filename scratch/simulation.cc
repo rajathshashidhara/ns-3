@@ -38,7 +38,7 @@
 
 using namespace ns3;
 
-NS_LOG_COMPONENT_DEFINE("TcpServer");
+NS_LOG_COMPONENT_DEFINE("Simulation");
 
 // /**
 //  * Sender
@@ -126,21 +126,20 @@ main(int argc, char* argv[])
 
     uint16_t port = 9;
     Address anyAddress = InetSocketAddress(Ipv4Address::GetAny(), port);
-    Ptr<Socket> socket = Socket::CreateSocket(nodes.Get(1), TcpSocketFactory::GetTypeId());
+    Ptr<Socket> socket = Socket::CreateSocket(nodes.Get(0), TcpSocketFactory::GetTypeId());
     socket->Bind(anyAddress);
     socket->Connect(InetSocketAddress(i.GetAddress(1), port));
 
     //
     // Create a SendBulkApplication and install it on node 0.
     //
-    BulkSendHelper source("ns3::TcpSocketFactory", InetSocketAddress(i.GetAddress(1), port));
-    // Set the amount of data to send in bytes.  Zero is unlimited.
-    source.SetAttribute("MaxBytes", UintegerValue(max_bytes));
-    source.SetAttribute("SendSize", UintegerValue(send_size));
-    ApplicationContainer sourceApps = source.Install(nodes.Get(0));
-    DynamicCast<BulkSendApplication>(sourceApps.Get(0))->SetSocket(socket);
-    sourceApps.Start(Seconds(0.0));
-    sourceApps.Stop(Seconds(10.0));
+    Ptr<BulkSendApplication> source = CreateObject<BulkSendApplication>();
+    source->SetMaxBytes(max_bytes);
+    source->SetSendSize(send_size);
+    source->SetSocket(socket);
+    nodes.Get(0)->AddApplication(source);
+    source->SetStartTime(Seconds(0.0));
+    source->SetStopTime(Seconds(10.0));
     
 
     // AsciiTraceHelper ascii;
@@ -150,12 +149,6 @@ main(int argc, char* argv[])
     // // TODO install trace on m_dataRetrCount in ns3TcpSocket to trace retransmissions
     // // TODO "Since the maximum blocks that fits into a TCP header are 4, there's no point on maintaining the others."
 
-    // // A SACK option that specifies n blocks will have a length of 8*n+2
-    // // bytes, so the 40 bytes available for TCP options can specify a
-    // // maximum of 4 blocks.  It is expected that SACK will often be used in
-    // // conjunction with the Timestamp option used for RTTM [Jacobson92],
-    // // which takes an additional 10 bytes (plus two bytes of padding); thus
-    // // a maximum of 3 SACK blocks will be allowed in this case.
 
     // // Ptr<OutputStreamWrapper> stream = ascii.CreateFileStream("retransmission.tr");
 
