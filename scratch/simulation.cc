@@ -125,11 +125,11 @@ main(int argc, char* argv[])
     Ipv4GlobalRoutingHelper::PopulateRoutingTables();
 
     uint16_t port = 9;
-    Address local = InetSocketAddress(i.GetAddress(1), port);
-    Address peer = InetSocketAddress(Ipv4Address::GetAny(), 1234);
+    Address peer = InetSocketAddress(i.GetAddress(1), port);
+    Address local = InetSocketAddress(Ipv4Address::GetAny(), 1234);
     Ptr<Socket> socket = Socket::CreateSocket(nodes.Get(0), TcpSocketFactory::GetTypeId());
-    socket->Bind(peer);
-    socket->Connect(local);
+    socket->Bind(local);
+    socket->Connect(peer);
 
     // TODO look at GH to see how they simulate datacenter flows
     // TODO add parameter to TcpRxBuffer to include a parameter for SACK
@@ -152,7 +152,7 @@ main(int argc, char* argv[])
     
     // Use Helper
 
-    BulkSendHelper source("ns3::TcpSocketFactory", local);
+    BulkSendHelper source("ns3::TcpSocketFactory", peer);
     // Set the amount of data to send in bytes.  Zero is unlimited.
     source.SetAttribute("MaxBytes", UintegerValue(max_bytes));
     source.SetAttribute("SendSize", UintegerValue(send_size));
