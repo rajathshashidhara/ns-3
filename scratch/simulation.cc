@@ -125,10 +125,11 @@ main(int argc, char* argv[])
     Ipv4GlobalRoutingHelper::PopulateRoutingTables();
 
     uint16_t port = 9;
-    Address anyAddress = InetSocketAddress(Ipv4Address::GetAny(), port);
+    Address local = InetSocketAddress(i.GetAddress(1), port);
+    Address peer = InetSocketAddress(Ipv4Address::GetAny(), 1234);
     Ptr<Socket> socket = Socket::CreateSocket(nodes.Get(0), TcpSocketFactory::GetTypeId());
-    socket->Bind(anyAddress);
-    socket->Connect(InetSocketAddress(i.GetAddress(1), port));
+    socket->Bind(peer);
+    socket->Connect(local);
 
     // TODO look at GH to see how they simulate datacenter flows
     // TODO add parameter to TcpRxBuffer to include a parameter for SACK
@@ -151,7 +152,7 @@ main(int argc, char* argv[])
     
     // Use Helper
 
-    BulkSendHelper source("ns3::TcpSocketFactory", InetSocketAddress(i.GetAddress(1), port));
+    BulkSendHelper source("ns3::TcpSocketFactory", local);
     // Set the amount of data to send in bytes.  Zero is unlimited.
     source.SetAttribute("MaxBytes", UintegerValue(max_bytes));
     source.SetAttribute("SendSize", UintegerValue(send_size));
@@ -172,7 +173,7 @@ main(int argc, char* argv[])
     //
     // Create a PacketSinkApplication and install it on node 1
     //
-    PacketSinkHelper sink("ns3::TcpSocketFactory", anyAddress);
+    PacketSinkHelper sink("ns3::TcpSocketFactory", peer);
     ApplicationContainer sinkApps = sink.Install(nodes.Get(1));
     sinkApps.Start(Seconds(0.0));
     sinkApps.Stop(Seconds(10.0));
