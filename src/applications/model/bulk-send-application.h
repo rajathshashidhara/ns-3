@@ -103,6 +103,7 @@ class BulkSendApplication : public Application
     void SetSendSize(uint32_t sendSize);
 
     void SetSocket(Ptr<Socket> socket);
+    void SetConnected(bool connect);
 
     /**
      * \brief Send data until the L4 transmission buffer is full.

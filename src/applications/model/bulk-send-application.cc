@@ -116,13 +116,22 @@ BulkSendApplication::SetMaxBytes(uint64_t maxBytes)
 void
 BulkSendApplication::SetSocket(Ptr<Socket> socket)
 {
+    NS_LOG_FUNCTION(this);
     m_socket = socket;
     m_connected = true;
 }
 
 void
+BulkSendApplication::SetConnected(bool connect)
+{
+    NS_LOG_FUNCTION(this);
+    m_connected = connect;
+}
+
+void
 BulkSendApplication::SetSendSize(uint32_t sendSize)
 {
+    NS_LOG_FUNCTION(this);
     m_sendSize = sendSize;
 }
 
@@ -312,7 +321,7 @@ BulkSendApplication::ConnectionSucceeded(Ptr<Socket> socket)
 {
     NS_LOG_FUNCTION(this << socket);
     NS_LOG_LOGIC("BulkSendApplication Connection succeeded");
-    m_connected = true;
+    // m_connected = true;
     Address from;
     Address to;
     socket->GetSockName(from);

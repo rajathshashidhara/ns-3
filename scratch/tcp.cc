@@ -38,20 +38,69 @@ using namespace ns3;
 NS_LOG_COMPONENT_DEFINE("TcpBulkSendExample");
 
 /**
+ * Retransmissions
+**/
+static void
+ReTrace(uint32_t oldValue, uint32_t newValue)
+{   
+    std::cout << " " << std::to_string(Simulator::Now().GetSeconds()) << " " << newValue << std::endl;
+}
+
+/**
+ * Sender
+**/
+static void
+TestTrace(Ptr<const Packet> packet)
+{   
+    std::cout << " " << std::to_string(Simulator::Now().GetSeconds()) << std::endl;
+}
+
+/**
  * Sender
 **/
 static void
 SendTrace(SequenceNumber32 oldValue, SequenceNumber32 newValue)
 {   
-    std::cout << " " << std::to_string(Simulator::Now().GetSeconds()) << " " << newValue << std::endl;
+    std::cout << "Send " << std::to_string(Simulator::Now().GetSeconds()) << " " << newValue << std::endl;
+}
+
+/**
+ * Recv
+**/
+static void
+RecvTrace(SequenceNumber32 oldValue, SequenceNumber32 newValue)
+{   
+    std::cout << "Recv " << std::to_string(Simulator::Now().GetSeconds()) << " " << newValue << std::endl;
 }
 
 void 
-handler(Ptr<BulkSendApplication> app)
+handler(ApplicationContainer sourceApps)
 {
-    Ptr<TcpSocketBase> socket = DynamicCast<TcpSocketBase>(app->GetSocket());
-    socket->TraceConnectWithoutContext("HighestSequence", MakeCallback(&SendTrace));
-    app->DataSend(socket, 5);
+    Ptr<BulkSendApplication> send = DynamicCast<BulkSendApplication>(sourceApps.Get(0));
+    // Sender socket.
+    Ptr<TcpSocketBase> sendSock = DynamicCast<TcpSocketBase>(send->GetSocket());
+
+    // Add traces.
+    bool ok = true;
+    // ok = sendSock->TraceConnectWithoutContext("HighestSequence", MakeCallback(&SendTrace));
+    // NS_ASSERT(ok);
+    // ok = sendSock->TraceConnectWithoutContext("HighestRxAck", MakeCallback(&RecvTrace));
+    // NS_ASSERT(ok);
+    ok = sendSock->TraceConnectWithoutContext("RetransmissionsRemain", MakeCallback(&ReTrace));
+    NS_ASSERT(ok);
+
+    Ptr<PacketSink> recv = DynamicCast<PacketSink>(sourceApps.Get(1));
+    // Receiver socket.
+    // std::list<Ptr<Socket>> acceptSocks = recv->GetAcceptedSockets();
+    // NS_ASSERT(acceptSocks.size() == 1); // Only one accepting socket.
+
+    // Set SACK on recv.
+    // Ptr<TcpSocketBase> recvSock = DynamicCast<TcpSocketBase>(acceptSocks.front());
+    // recvSock->SetAttribute("NSack", UintegerValue(4));
+
+    // Send the data.
+    send->SetConnected(true);
+    send->DataSend(sendSock, 5);
 }
 
 int
@@ -59,6 +108,8 @@ main(int argc, char* argv[])
 {
     uint32_t send_size = 100000; // can't make send size any larger or else it just won't be able to send.
     double error_rate = 0.0;
+
+    // TODO look at GH to see how they simulate datacenter flows
 
     //
     // Allow the user to override any of the defaults at
@@ -69,7 +120,7 @@ main(int argc, char* argv[])
     cmd.AddValue("ErrorRate", "Packet Drop Rate", error_rate);    
     cmd.Parse(argc, argv);
 
-    uint64_t max_bytes = (uint32_t)send_size * 1;
+    uint64_t max_bytes = (uint32_t)send_size * 10;
 
     //
     // Explicitly create the nodes required by the topology (shown above).
@@ -137,13 +188,13 @@ main(int argc, char* argv[])
     sinkApps.Stop(Seconds(20.0));
 
     //
-    // Set up tracing if enabled
+    // Set up tracing on L2
     //
-    AsciiTraceHelper ascii;
-    Ptr<OutputStreamWrapper> stream = ascii.CreateFileStream("tcp.tr");
+    // AsciiTraceHelper ascii;
+    // Ptr<OutputStreamWrapper> stream = ascii.CreateFileStream("tcp.tr");
     // p2p.EnableAscii(stream, devices.Get(0));
 
-    Simulator::Schedule(Seconds(1), &handler, DynamicCast<BulkSendApplication>(sourceApps.Get(0)));
+    Simulator::Schedule(Seconds(1), &handler, sourceApps);
 
     //
     // Now, do the actual simulation.

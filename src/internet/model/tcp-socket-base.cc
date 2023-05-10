@@ -98,6 +98,11 @@ TcpSocketBase::GetTypeId()
                           UintegerValue(65535),
                           MakeUintegerAccessor(&TcpSocketBase::m_maxWinSize),
                           MakeUintegerChecker<uint16_t>())
+            .AddAttribute("NSack",
+                          "Max Sack",
+                          UintegerValue(4),
+                          MakeUintegerAccessor(&TcpSocketBase::m_nsack),
+                          MakeUintegerChecker<uint8_t>())
             .AddAttribute("IcmpCallback",
                           "Callback invoked whenever an icmp error is received on this socket.",
                           CallbackValue(),
@@ -193,6 +198,10 @@ TcpSocketBase::GetTypeId()
                             "TCP state",
                             MakeTraceSourceAccessor(&TcpSocketBase::m_state),
                             "ns3::TcpStatesTracedValueCallback")
+            .AddTraceSource("RetransmissionsRemain",
+                            "TCP state",
+                            MakeTraceSourceAccessor(&TcpSocketBase::m_dataRetrCountTrace),
+                            "ns3::TracedValueCallback::Uint32")
             .AddTraceSource("CongState",
                             "TCP Congestion machine state",
                             MakeTraceSourceAccessor(&TcpSocketBase::m_congStateTrace),
@@ -276,6 +285,7 @@ TcpSocketBase::TcpSocketBase()
     m_rateOps = CreateObject<TcpRateLinux>();
 
     m_tcb->m_rxBuffer = CreateObject<TcpRxBuffer>();
+    m_tcb->m_rxBuffer->SetNSack(m_nsack);
 
     m_tcb->m_pacingRate = m_tcb->m_maxPacingRate;
     m_pacingTimer.SetFunction(&TcpSocketBase::NotifyPacingPerformed, this);
@@ -3778,6 +3788,7 @@ TcpSocketBase::ReTxTimeout()
     }
     else
     {
+        m_dataRetrCountTrace(m_dataRetrCount, m_dataRetrCount - 1);
         --m_dataRetrCount;
     }
 
@@ -3886,6 +3897,7 @@ TcpSocketBase::LastAckTimeout()
             DeallocateEndPoint();
             return;
         }
+        m_dataRetrCountTrace(m_dataRetrCount, m_dataRetrCount - 1);
         m_dataRetrCount--;
         SendEmptyPacket(TcpHeader::FIN | TcpHeader::ACK);
         NS_LOG_LOGIC("TcpSocketBase " << this << " rescheduling LATO1");
@@ -4511,6 +4523,12 @@ void
 TcpSocketBase::UpdateHighTxMark(SequenceNumber32 oldValue, SequenceNumber32 newValue) const
 {
     m_highTxMarkTrace(oldValue, newValue);
+}
+
+void
+TcpSocketBase::UpdateRetransmit(uint32_t oldValue, uint32_t newValue) const
+{
+    m_dataRetrCountTrace(oldValue, newValue);
 }
 
 void

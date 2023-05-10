@@ -178,6 +178,7 @@ TrafficControlLayer::ScanDevices()
 
                     if (ndi->second.m_rootQueueDisc->GetWakeMode() == QueueDisc::WAKE_ROOT)
                     {
+                        NS_LOG_DEBUG("WAKE_ROOT");
                         qd = ndi->second.m_rootQueueDisc;
                     }
                     else if (ndi->second.m_rootQueueDisc->GetWakeMode() == QueueDisc::WAKE_CHILD)
@@ -186,7 +187,7 @@ TrafficControlLayer::ScanDevices()
                                             ndqi->GetNTxQueues(),
                                         "The number of child queue discs does not match the number "
                                         "of netdevice queues");
-
+                        NS_LOG_DEBUG("WAKE_CHILD");
                         qd = ndi->second.m_rootQueueDisc->GetQueueDiscClass(i)->GetQueueDisc();
                     }
                     else

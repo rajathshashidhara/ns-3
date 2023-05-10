@@ -366,6 +366,8 @@ class TcpSocketBase : public TcpSocket
      */
     TracedCallback<uint32_t, uint32_t> m_bytesInFlightTrace;
 
+    TracedCallback<uint32_t, uint32_t> m_dataRetrCountTrace;
+
     /**
      * \brief Callback pointer for RTT trace chaining
      */
@@ -428,6 +430,8 @@ class TcpSocketBase : public TcpSocket
      * \param newValue new nextTxSeq value
      */
     void UpdateNextTxSequence(SequenceNumber32 oldValue, SequenceNumber32 newValue) const;
+
+    void UpdateRetransmit(uint32_t oldValue, uint32_t newValue) const;
 
     /**
      * \brief Callback function to hook to TcpSocketState bytes inflight
@@ -1294,7 +1298,7 @@ class TcpSocketBase : public TcpSocket
     uint32_t m_synRetries{0};    //!< Number of connection attempts
     uint32_t m_dataRetrCount{0}; //!< Count of remaining data retransmission attempts
     uint32_t m_dataRetries{0};   //!< Number of data retransmission attempts
-
+    
     // Timeouts
     TracedValue<Time> m_rto{Seconds(0.0)};   //!< Retransmit timeout
     Time m_minRto{Time::Max()};              //!< minimum value of the Retransmit timeout
@@ -1344,6 +1348,7 @@ class TcpSocketBase : public TcpSocket
 
     // Options
     bool m_sackEnabled{true};       //!< RFC SACK option enabled
+    uint8_t m_nsack{4};
     bool m_winScalingEnabled{true}; //!< Window Scale option enabled (RFC 7323)
     uint8_t m_rcvWindShift{0};      //!< Window shift to apply to outgoing segments
     uint8_t m_sndWindShift{0};      //!< Window shift to apply to incoming segments

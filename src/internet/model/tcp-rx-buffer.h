@@ -111,6 +111,7 @@ class TcpRxBuffer : public Object
      * \param s the Sequence number
      */
     void SetFinSequence(const SequenceNumber32& s);
+    void SetNSack(uint8_t nsack);
     /**
      * \brief Get the Maximum buffer size
      * \returns the Maximum buffer size
@@ -230,6 +231,7 @@ class TcpRxBuffer : public Object
     uint32_t m_size;       //!< Number of total data bytes in the buffer, not necessarily contiguous
     uint32_t m_maxBuffer;  //!< Upper bound of the number of data bytes in buffer (RCV.WND)
     uint32_t m_availBytes; //!< Number of bytes available to read, i.e. contiguous block at head
+    uint32_t m_nsack;
     std::map<SequenceNumber32, Ptr<Packet>> m_data; //!< Corresponding data (may be null)
 };
 
