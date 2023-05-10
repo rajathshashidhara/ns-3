@@ -67,6 +67,11 @@ NS_LOG_COMPONENT_DEFINE("Simulation");
 //     std::cout << " " << std::to_string(Simulator::Now().GetSeconds()) << " " << newValue << std::endl;
 // }
 
+// void handler(Ptr<BulkSendApplication> app)
+// {
+//     app->DataSend(app->GetSocket(), 5);
+// }
+
 int
 main(int argc, char* argv[])
 {
@@ -82,7 +87,7 @@ main(int argc, char* argv[])
     cmd.AddValue("ErrorRate", "Packet Drop Rate", error_rate);
     cmd.Parse(argc, argv);
 
-    uint32_t max_bytes = send_size * 10000;
+    uint32_t max_bytes = send_size * 100;
 
     // Here, we will create N nodes in a star.
     NS_LOG_INFO("Create nodes.");
@@ -109,7 +114,7 @@ main(int argc, char* argv[])
 
     AsciiTraceHelper ascii;
     Ptr<OutputStreamWrapper> stream = ascii.CreateFileStream("tcp.tr");
-    p2p.EnableAscii(stream, devices.Get(1));
+    p2p.EnableAscii(stream, devices.Get(0));
 
     // Install network stacks on the nodes
     InternetStackHelper internet;
@@ -126,10 +131,11 @@ main(int argc, char* argv[])
 
     uint16_t port = 9;
     Address peer = InetSocketAddress(i.GetAddress(1), port);
-    Address local = InetSocketAddress(Ipv4Address::GetAny(), 1234);
-    Ptr<Socket> socket = Socket::CreateSocket(nodes.Get(0), TcpSocketFactory::GetTypeId());
-    socket->Bind(local);
-    socket->Connect(peer);
+    // Address local = InetSocketAddress(Ipv4Address::GetAny(), 1234);
+    // Ptr<Socket> socket = Socket::CreateSocket(nodes.Get(0), TcpSocketFactory::GetTypeId());
+    // NS_LOG_INFO(socket->Bind(local));
+    // NS_LOG_INFO(socket->Connect(peer));
+    // NS_LOG_INFO(socket->ShutdownRecv());
 
     // TODO look at GH to see how they simulate datacenter flows
     // TODO add parameter to TcpRxBuffer to include a parameter for SACK
@@ -157,9 +163,9 @@ main(int argc, char* argv[])
     source.SetAttribute("MaxBytes", UintegerValue(max_bytes));
     source.SetAttribute("SendSize", UintegerValue(send_size));
     ApplicationContainer sourceApps = source.Install(nodes.Get(0));
-    DynamicCast<BulkSendApplication>(sourceApps.Get(0))->SetSocket(socket);
+    // DynamicCast<BulkSendApplication>(sourceApps.Get(0))->SetSocket(socket);
     sourceApps.Start(Seconds(0.0));
-    sourceApps.Stop(Seconds(10.0));
+    sourceApps.Stop(Seconds(200.0));
 
 
     // Trace
@@ -176,7 +182,9 @@ main(int argc, char* argv[])
     PacketSinkHelper sink("ns3::TcpSocketFactory", peer);
     ApplicationContainer sinkApps = sink.Install(nodes.Get(1));
     sinkApps.Start(Seconds(0.0));
-    sinkApps.Stop(Seconds(10.0));
+    sinkApps.Stop(Seconds(200.0));
+
+    // Simulator::Schedule(Seconds(1), &handler, DynamicCast<BulkSendApplication>(sourceApps.Get(0)));
 
     NS_LOG_INFO("Run Simulation.");
     Simulator::Run();

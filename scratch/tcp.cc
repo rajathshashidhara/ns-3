@@ -37,6 +37,23 @@ using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE("TcpBulkSendExample");
 
+/**
+ * Sender
+**/
+static void
+SendTrace(SequenceNumber32 oldValue, SequenceNumber32 newValue)
+{   
+    std::cout << " " << std::to_string(Simulator::Now().GetSeconds()) << " " << newValue << std::endl;
+}
+
+void 
+handler(Ptr<BulkSendApplication> app)
+{
+    Ptr<TcpSocketBase> socket = DynamicCast<TcpSocketBase>(app->GetSocket());
+    socket->TraceConnectWithoutContext("HighestSequence", MakeCallback(&SendTrace));
+    app->DataSend(socket, 5);
+}
+
 int
 main(int argc, char* argv[])
 {
@@ -124,7 +141,9 @@ main(int argc, char* argv[])
     //
     AsciiTraceHelper ascii;
     Ptr<OutputStreamWrapper> stream = ascii.CreateFileStream("tcp.tr");
-    p2p.EnableAscii(stream, devices.Get(0));
+    // p2p.EnableAscii(stream, devices.Get(0));
+
+    Simulator::Schedule(Seconds(1), &handler, DynamicCast<BulkSendApplication>(sourceApps.Get(0)));
 
     //
     // Now, do the actual simulation.

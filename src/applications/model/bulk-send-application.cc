@@ -201,7 +201,7 @@ BulkSendApplication::StartApplication() // Called at time specified by Start
     if (m_connected)
     {
         m_socket->GetSockName(from);
-        SendData(from, m_peer);
+        // SendData(from, m_peer);
     }
 }
 
@@ -317,7 +317,7 @@ BulkSendApplication::ConnectionSucceeded(Ptr<Socket> socket)
     Address to;
     socket->GetSockName(from);
     socket->GetPeerName(to);
-    SendData(from, to);
+    // SendData(from, to);
 }
 
 void

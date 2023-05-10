@@ -105,10 +105,27 @@ class BulkSendApplication : public Application
     void SetSocket(Ptr<Socket> socket);
 
     /**
+     * \brief Send data until the L4 transmission buffer is full.
+     * \param from From address
+     * \param to To address
+     */
+    void SendData(const Address& from, const Address& to);
+    
+    /**
      * \brief Get the socket this application is attached to.
      * \return pointer to associated socket
      */
     Ptr<Socket> GetSocket() const;
+
+    /**
+     * \brief Send more data as soon as some has been transmitted.
+     *
+     * Used in socket's SetSendCallback - params are forced by it.
+     *
+     * \param socket socket to use
+     * \param unused actually unused
+     */
+    void DataSend(Ptr<Socket> socket, uint32_t unused);
 
   protected:
     void DoDispose() override;
@@ -118,12 +135,6 @@ class BulkSendApplication : public Application
     void StartApplication() override; // Called at time specified by Start
     void StopApplication() override;  // Called at time specified by Stop
 
-    /**
-     * \brief Send data until the L4 transmission buffer is full.
-     * \param from From address
-     * \param to To address
-     */
-    void SendData(const Address& from, const Address& to);
 
     Ptr<Socket> m_socket;                //!< Associated socket
     Address m_peer;                      //!< Peer address
@@ -156,15 +167,6 @@ class BulkSendApplication : public Application
      * \param socket the connected socket
      */
     void ConnectionFailed(Ptr<Socket> socket);
-    /**
-     * \brief Send more data as soon as some has been transmitted.
-     *
-     * Used in socket's SetSendCallback - params are forced by it.
-     *
-     * \param socket socket to use
-     * \param unused actually unused
-     */
-    void DataSend(Ptr<Socket> socket, uint32_t unused);
 };
 
 } // namespace ns3
