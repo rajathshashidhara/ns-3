@@ -95,14 +95,21 @@ class BulkSendApplication : public Application
      * up to maxBytes. The value zero for maxBytes means that
      * there is no upper bound; i.e. data is sent until the application
      * or simulation is stopped.
+     * 
+     * For this implementation, we change this to the size of the flow to send
+     * each time.
      *
-     * \param maxBytes the upper bound of bytes to send
+     * \param maxBytes the upper bound of bytes to send.
      */
     void SetMaxBytes(uint64_t maxBytes);
 
-    void SetSendSize(uint32_t sendSize);
-
-    void SetSocket(Ptr<Socket> socket);
+    /**
+     * \brief Indicate the connection has succeeded.
+     * 
+     * Set this to true once we finish setting up our trace.
+     * 
+     * \param connect connection status.
+    */
     void SetConnected(bool connect);
 
     /**
@@ -117,6 +124,31 @@ class BulkSendApplication : public Application
      * \return pointer to associated socket
      */
     Ptr<Socket> GetSocket() const;
+
+    /**
+     * \brief Get the receiver (who we're sending to).
+     * \return address of the received.
+    */
+    Address GetPeer() const;
+
+    /**
+     * \brief Get the sender (this).
+     * \return address of the node this is installed on.
+    */
+    Address GetLocal() const;
+
+    /**
+     * \brief Get the connection status of the socket.
+     * \return true if connected, false otherwise.
+    */
+    bool GetConnected() const;
+
+    /**
+     * \brief Callback for when the underlying socket is connected.
+     * \param connectionSucceeded callback function passed to BulkSendApplication.
+    */
+    void SetConnectCallback(Callback<void, Ptr<BulkSendApplication>> connectionSucceeded);
+    
 
     /**
      * \brief Send more data as soon as some has been transmitted.
@@ -148,6 +180,8 @@ class BulkSendApplication : public Application
     uint32_t m_seq{0};                   //!< Sequence
     Ptr<Packet> m_unsentPacket;          //!< Variable to cache unsent packet
     bool m_enableSeqTsSizeHeader{false}; //!< Enable or disable the SeqTsSizeHeader
+
+    Callback<void, Ptr<BulkSendApplication>> m_connectionSucceeded; //!< connection succeeded callback
 
     /// Traced Callback: sent packets
     TracedCallback<Ptr<const Packet>> m_txTrace;

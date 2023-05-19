@@ -47,11 +47,6 @@ BulkSendApplication::GetTypeId()
             .SetParent<Application>()
             .SetGroupName("Applications")
             .AddConstructor<BulkSendApplication>()
-            .AddAttribute("SendSize",
-                          "The amount of data to send each time.",
-                          UintegerValue(512),
-                          MakeUintegerAccessor(&BulkSendApplication::m_sendSize),
-                          MakeUintegerChecker<uint32_t>(1))
             .AddAttribute("Remote",
                           "The address of the destination",
                           AddressValue(),
@@ -114,25 +109,17 @@ BulkSendApplication::SetMaxBytes(uint64_t maxBytes)
 }
 
 void
-BulkSendApplication::SetSocket(Ptr<Socket> socket)
-{
-    NS_LOG_FUNCTION(this);
-    m_socket = socket;
-    m_connected = true;
-}
-
-void
 BulkSendApplication::SetConnected(bool connect)
 {
     NS_LOG_FUNCTION(this);
     m_connected = connect;
 }
 
-void
-BulkSendApplication::SetSendSize(uint32_t sendSize)
+bool
+BulkSendApplication::GetConnected() const
 {
     NS_LOG_FUNCTION(this);
-    m_sendSize = sendSize;
+    return m_connected;
 }
 
 Ptr<Socket>
@@ -140,6 +127,20 @@ BulkSendApplication::GetSocket() const
 {
     NS_LOG_FUNCTION(this);
     return m_socket;
+}
+
+Address 
+BulkSendApplication::GetPeer() const
+{
+    NS_LOG_FUNCTION(this);
+    return m_peer;
+}
+
+Address 
+BulkSendApplication::GetLocal() const
+{
+    NS_LOG_FUNCTION(this);
+    return m_local;
 }
 
 void
@@ -151,6 +152,13 @@ BulkSendApplication::DoDispose()
     m_unsentPacket = nullptr;
     // chain up
     Application::DoDispose();
+}
+
+void
+BulkSendApplication::SetConnectCallback(Callback<void, Ptr<BulkSendApplication>> connectionSucceeded)
+{
+    NS_LOG_FUNCTION(this);
+    m_connectionSucceeded = connectionSucceeded;
 }
 
 // Application Methods
@@ -205,12 +213,14 @@ BulkSendApplication::StartApplication() // Called at time specified by Start
         m_socket->ShutdownRecv();
         m_socket->SetConnectCallback(MakeCallback(&BulkSendApplication::ConnectionSucceeded, this),
                                      MakeCallback(&BulkSendApplication::ConnectionFailed, this));
-        m_socket->SetSendCallback(MakeCallback(&BulkSendApplication::DataSend, this));
+        // m_socket->SetSendCallback(MakeCallback(&BulkSendApplication::DataSend, this));
+        // ^ wait until scheduled flow to send.
     }
     if (m_connected)
     {
         m_socket->GetSockName(from);
         // SendData(from, m_peer);
+        // ^ wait until scheduled flow to send.
     }
 }
 
@@ -230,19 +240,18 @@ BulkSendApplication::StopApplication() // Called at time specified by Stop
     }
 }
 
-// Private helpers
-
 void
 BulkSendApplication::SendData(const Address& from, const Address& to)
 {
     NS_LOG_FUNCTION(this);
-    while (m_maxBytes == 0 || m_totBytes < m_maxBytes)
+
+    // Set total bytes sent to 0 each time we SendData, and send until we've
+    // sent the entire flow.
+    m_totBytes = 0;
+    while (m_totBytes < m_maxBytes)
     { // Time to send more
 
-        // uint64_t to allow the comparison later.
-        // the result is in a uint32_t range anyway, because
-        // m_sendSize is uint32_t.
-        uint64_t toSend = m_sendSize;
+        uint64_t toSend = m_maxBytes;
         // Make sure we don't send too many
         if (m_maxBytes > 0)
         {
@@ -308,12 +317,14 @@ BulkSendApplication::SendData(const Address& from, const Address& to)
             NS_FATAL_ERROR("Unexpected return value from m_socket->Send ()");
         }
     }
+    
     // Check if time to close (all sent)
-    if (m_totBytes == m_maxBytes && m_connected)
-    {
-        m_socket->Close();
-        m_connected = false;
-    }
+    // if (m_totBytes == m_maxBytes && m_connected)
+    // {
+    //     m_socket->Close();
+    //     m_connected = false;
+    // }
+    // ^ don't close the socket once we finish one flow. Use StopApplication() to close the socket.
 }
 
 void
@@ -321,12 +332,8 @@ BulkSendApplication::ConnectionSucceeded(Ptr<Socket> socket)
 {
     NS_LOG_FUNCTION(this << socket);
     NS_LOG_LOGIC("BulkSendApplication Connection succeeded");
-    // m_connected = true;
-    Address from;
-    Address to;
-    socket->GetSockName(from);
-    socket->GetPeerName(to);
-    // SendData(from, to);
+
+    m_connectionSucceeded(Ptr<BulkSendApplication>(this));
 }
 
 void
@@ -339,7 +346,7 @@ BulkSendApplication::ConnectionFailed(Ptr<Socket> socket)
 void
 BulkSendApplication::DataSend(Ptr<Socket> socket, uint32_t)
 {
-    NS_LOG_FUNCTION(this);
+    // NS_LOG_FUNCTION(this);
 
     if (m_connected)
     { // Only send new data if the connection has completed
@@ -347,7 +354,8 @@ BulkSendApplication::DataSend(Ptr<Socket> socket, uint32_t)
         Address to;
         socket->GetSockName(from);
         socket->GetPeerName(to);
-        SendData(from, to);
+        // SendData(from, to);
+        // ^ wait until scheduled flow to send.
     }
 }
 

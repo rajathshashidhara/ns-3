@@ -3788,7 +3788,7 @@ TcpSocketBase::ReTxTimeout()
     }
     else
     {
-        m_dataRetrCountTrace(m_dataRetrCount, m_dataRetrCount - 1);
+        UpdateRetransmit(m_dataRetrCount, m_dataRetrCount - 1);
         --m_dataRetrCount;
     }
 
@@ -3897,7 +3897,7 @@ TcpSocketBase::LastAckTimeout()
             DeallocateEndPoint();
             return;
         }
-        m_dataRetrCountTrace(m_dataRetrCount, m_dataRetrCount - 1);
+        UpdateRetransmit(m_dataRetrCount, m_dataRetrCount - 1);
         m_dataRetrCount--;
         SendEmptyPacket(TcpHeader::FIN | TcpHeader::ACK);
         NS_LOG_LOGIC("TcpSocketBase " << this << " rescheduling LATO1");

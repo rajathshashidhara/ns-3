@@ -1298,6 +1298,7 @@ class TcpSocketBase : public TcpSocket
     uint32_t m_synRetries{0};    //!< Number of connection attempts
     uint32_t m_dataRetrCount{0}; //!< Count of remaining data retransmission attempts
     uint32_t m_dataRetries{0};   //!< Number of data retransmission attempts
+    uint8_t m_nsack{4};          //!< The maximum number of allowed SACK segments
     
     // Timeouts
     TracedValue<Time> m_rto{Seconds(0.0)};   //!< Retransmit timeout
@@ -1348,7 +1349,6 @@ class TcpSocketBase : public TcpSocket
 
     // Options
     bool m_sackEnabled{true};       //!< RFC SACK option enabled
-    uint8_t m_nsack{4};
     bool m_winScalingEnabled{true}; //!< Window Scale option enabled (RFC 7323)
     uint8_t m_rcvWindShift{0};      //!< Window shift to apply to outgoing segments
     uint8_t m_sndWindShift{0};      //!< Window shift to apply to incoming segments
