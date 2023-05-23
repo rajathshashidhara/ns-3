@@ -118,6 +118,8 @@ class BulkSendApplication : public Application
      * \param to To address
      */
     void SendData(const Address& from, const Address& to);
+
+    void SendSize(uint32_t size);
     
     /**
      * \brief Get the socket this application is attached to.

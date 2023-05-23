@@ -241,6 +241,83 @@ BulkSendApplication::StopApplication() // Called at time specified by Stop
 }
 
 void
+BulkSendApplication::SendSize(uint32_t size)
+{
+    NS_LOG_FUNCTION(this);
+
+    // Set total bytes sent to 0 each time we SendData, and send until we've
+    // sent the entire flow.
+    uint32_t sentBytes = 0;
+    m_unsentPacket = nullptr;
+    while (sentBytes < size)
+    { // Time to send more
+
+        uint64_t toSend = size;
+        // Make sure we don't send too many
+        if (size > 0)
+        {
+            toSend = std::min(toSend, (uint64_t) (size - sentBytes));
+        }
+
+        NS_LOG_LOGIC("sending packet at " << Simulator::Now());
+
+        Ptr<Packet> packet;
+        if (m_unsentPacket)
+        {
+            packet = m_unsentPacket;
+            toSend = packet->GetSize();
+        }
+        else if (m_enableSeqTsSizeHeader)
+        {
+            SeqTsSizeHeader header;
+            header.SetSeq(m_seq++);
+            header.SetSize(toSend);
+            NS_ABORT_IF(toSend < header.GetSerializedSize());
+            packet = Create<Packet>(toSend - header.GetSerializedSize());
+            packet->AddHeader(header);
+        }
+        else
+        {
+            packet = Create<Packet>(toSend);
+        }
+
+        int actual = m_socket->Send(packet);
+        if ((unsigned)actual == toSend)
+        {
+            sentBytes += actual;
+            m_unsentPacket = nullptr;
+        }
+        else if (actual == -1)
+        {
+            // We exit this loop when actual < toSend as the send side
+            // buffer is full. The "DataSent" callback will pop when
+            // some buffer space has freed up.
+            NS_LOG_DEBUG("Unable to send packet; caching for later attempt");
+            m_unsentPacket = packet;
+            break;
+        }
+        else if (actual > 0 && (unsigned)actual < toSend)
+        {
+            // A Linux socket (non-blocking, such as in DCE) may return
+            // a quantity less than the packet size.  Split the packet
+            // into two, trace the sent packet, save the unsent packet
+            NS_LOG_DEBUG("Packet size: " << packet->GetSize() << "; sent: " << actual
+                                         << "; fragment saved: " << toSend - (unsigned)actual);
+            Ptr<Packet> sent = packet->CreateFragment(0, actual);
+            Ptr<Packet> unsent = packet->CreateFragment(actual, (toSend - (unsigned)actual));
+            sentBytes += actual;
+            m_txTrace(sent);
+            m_unsentPacket = unsent;
+            break;
+        }
+        else
+        {
+            NS_FATAL_ERROR("Unexpected return value from m_socket->Send ()");
+        }
+    }
+}
+
+void
 BulkSendApplication::SendData(const Address& from, const Address& to)
 {
     NS_LOG_FUNCTION(this);
