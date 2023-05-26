@@ -31,6 +31,7 @@
 #include "ns3/tcp-socket-factory.h"
 #include "ns3/trace-source-accessor.h"
 #include "ns3/uinteger.h"
+#include "ns3/output-stream-wrapper.h"
 
 namespace ns3
 {
@@ -155,10 +156,18 @@ BulkSendApplication::DoDispose()
 }
 
 void
-BulkSendApplication::SetConnectCallback(Callback<void, Ptr<BulkSendApplication>> connectionSucceeded)
+BulkSendApplication::SetConnectCallback(Callback<void, Ptr<BulkSendApplication>, Ptr<OutputStreamWrapper>, Ptr<OutputStreamWrapper>> connectionSucceeded)
 {
     NS_LOG_FUNCTION(this);
     m_connectionSucceeded = connectionSucceeded;
+}
+
+void
+BulkSendApplication::SetTraceStreams(Ptr<OutputStreamWrapper> fct, Ptr<OutputStreamWrapper> retr)
+{
+    NS_LOG_FUNCTION(this);
+    m_fct = fct;
+    m_retr = retr;
 }
 
 // Application Methods
@@ -410,7 +419,9 @@ BulkSendApplication::ConnectionSucceeded(Ptr<Socket> socket)
     NS_LOG_FUNCTION(this << socket);
     NS_LOG_LOGIC("BulkSendApplication Connection succeeded");
 
-    m_connectionSucceeded(Ptr<BulkSendApplication>(this));
+    NS_ASSERT(m_fct != nullptr);
+    NS_ASSERT(m_retr != nullptr);
+    m_connectionSucceeded(Ptr<BulkSendApplication>(this), m_fct, m_retr);
 }
 
 void

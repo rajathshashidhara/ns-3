@@ -28,6 +28,7 @@
 #include <iostream>
 #include <sstream>
 #include <vector>
+#include <cmath>
 
 using namespace ns3;
 
@@ -64,16 +65,13 @@ RecvTrace(Ptr<OutputStreamWrapper> stream, std::string context, SequenceNumber32
  * Set up TCP connection with trace.
 */
 void 
-traceHandler(Ptr<BulkSendApplication> app)
+traceHandler(Ptr<BulkSendApplication> app, Ptr<OutputStreamWrapper> fct, Ptr<OutputStreamWrapper> re)
 {
     uint32_t node = app->GetNode()->GetId();
+    NS_LOG_INFO("Setting up trace on " << node);
 
     // Socket.
     Ptr<TcpSocketBase> socket = DynamicCast<TcpSocketBase>(app->GetSocket());
-
-    AsciiTraceHelper ascii;
-    Ptr<OutputStreamWrapper> fct = ascii.CreateFileStream("scratch/traces/fct/" + std::to_string(node) + ".tr");
-    Ptr<OutputStreamWrapper> re = ascii.CreateFileStream("scratch/traces/retr/" + std::to_string(node) + ".tr");
 
     // Add traces.
     bool ok = true;
@@ -94,6 +92,7 @@ traceHandler(Ptr<BulkSendApplication> app)
 void
 flowHandler(ApplicationContainer apps, uint32_t size)
 {
+    NS_LOG_INFO("Sending " << size);
     Ptr<BulkSendApplication> send = DynamicCast<BulkSendApplication>(apps.Get(0));
     NS_ASSERT(send->GetConnected());
     send->SendSize(size);
@@ -106,7 +105,7 @@ main(int argc, char* argv[])
     double error_rate = 0.00;
     uint8_t sack = 4;
     uint32_t data_retries = 5;
-    uint32_t num_pods = 2;
+    uint32_t num_nodes = 16;
 
     //
     // Allow the user to override any of the defaults at
@@ -117,7 +116,7 @@ main(int argc, char* argv[])
     cmd.AddValue("ErrorRate", "Packet Drop Rate", error_rate);
     cmd.AddValue("Sack", "n-Sack", sack);
     cmd.AddValue("DataRetries", "TCP Max Retransmissions", data_retries);
-    cmd.AddValue("Pods", "Number of Pods", num_pods);
+    cmd.AddValue("Pods", "Number of Pods", num_nodes);
     cmd.Parse(argc, argv);
 
     Config::SetDefault("ns3::TcpSocket::DataRetries", UintegerValue(data_retries));
@@ -125,14 +124,18 @@ main(int argc, char* argv[])
     Config::SetDefault("ns3::TcpSocket::RcvBufSize", UintegerValue(50000000));
     Config::SetDefault("ns3::TcpSocketBase::NSack", UintegerValue(sack));
 
+    double pods = cbrt(4 * num_nodes);
+    if (fmod(pods, 2) != 0)
+    {
+        return 1;
+    }
+    uint32_t num_pods = static_cast<uint32_t>(pods);
+
     NS_LOG_INFO("Create channels.");
 
     //
     // Explicitly create the point-to-point link required by the topology (shown above).
     //
-
-    // TODO datacenter packet loss is extremely low according to Kevin's paper. Most loss comes from
-    // oversubscription.
 
     PointToPointHelper p2p;
     p2p.SetDeviceAttribute("DataRate", StringValue("100Gbps")); // TODO also run simulation at 40Gbps
@@ -166,7 +169,9 @@ main(int argc, char* argv[])
 
     NS_LOG_INFO("Create Applications.");
 
-    uint32_t num_nodes = num_pods * num_pods * num_pods / 4;  // number of servers in the entire network
+    AsciiTraceHelper ascii;
+    Ptr<OutputStreamWrapper> fct = ascii.CreateFileStream("scratch/traces/fct.tr");
+    Ptr<OutputStreamWrapper> re = ascii.CreateFileStream("scratch/traces/retr.tr");
 
 
     // Create a 2D matrix where maxtrix[i][j] = ApplicationContainer.
@@ -187,14 +192,15 @@ main(int argc, char* argv[])
                 //
                 uint16_t port = 9000 + i;
 
-                // TODO address isn't correct. Need to figure out how FatTreeHelper assigns IP addresses
                 BulkSendHelper source("ns3::TcpSocketFactory", InetSocketAddress(fattree.GetServerIpv4Address(j), port));
                 source.SetAttribute("MaxBytes", UintegerValue(0));
                 apps.Add(source.Install(fattree.GetServerNode(i)));
 
                 // Create a callback, which indicates when the TCP connection succeeds, so can set
                 // up traces.
-                DynamicCast<BulkSendApplication>(apps.Get(0))->SetConnectCallback(&traceHandler);
+                Ptr<BulkSendApplication> app = DynamicCast<BulkSendApplication>(apps.Get(0));
+                app->SetTraceStreams(fct, re);
+                app->SetConnectCallback(&traceHandler);
 
                 //
                 // Create a PacketSinkApplication and install it on node j.
@@ -209,12 +215,15 @@ main(int argc, char* argv[])
         }
     }
 
+    NS_LOG_INFO("Use global routing.");
+    Ipv4GlobalRoutingHelper::PopulateRoutingTables();
+
     //
     // Read and schedule flows from traffic_gen.
     //
 
     std::ifstream file;
-    file.open("scratch/tmp_traffic.txt", std::ifstream::in);
+    file.open("traffic_gen/tmp_traffic.txt", std::ifstream::in);
 
     std::string row;
     while (std::getline(file, row))
@@ -237,25 +246,31 @@ main(int argc, char* argv[])
     //
     // Now, do the actual simulation.
     //
-    
+
     NS_LOG_INFO("Run Simulation.");
     Simulator::Stop(Seconds(5000.0));
     Simulator::Run();
     Simulator::Destroy();
     NS_LOG_INFO("Done.");
 
+    std::vector<uint64_t> nodes(num_nodes, 0);
+
     // View the total bytes received at each PacketSink.
-    for (uint32_t i = 0; i < num_pods; i++) 
+    for (uint32_t i = 0; i < num_nodes; i++) 
     {
-        for (uint32_t j = 0; j < num_pods; j++)
+        for (uint32_t j = 0; j < num_nodes; j++)
         {
             if (i != j)
             {
                 ApplicationContainer apps = matrix[i][j];
                 Ptr<PacketSink> sink1 = DynamicCast<PacketSink>(apps.Get(1));
-                std::cout << "Total Bytes Received: " << sink1->GetTotalRx() << std::endl;
+                nodes[j] += sink1->GetTotalRx();
             }  
         }
+    }
+
+    for (uint32_t i = 0; i < nodes.size(); i++) {
+        std::cout << "Node " << std::to_string(i) << " Received " << std::to_string(nodes[i]) << " Total Bytes" << std::endl;
     }
 
     return 0;

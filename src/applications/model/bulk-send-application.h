@@ -26,6 +26,7 @@
 #include "ns3/ptr.h"
 #include "ns3/seq-ts-size-header.h"
 #include "ns3/traced-callback.h"
+#include "ns3/output-stream-wrapper.h"
 
 namespace ns3
 {
@@ -149,7 +150,9 @@ class BulkSendApplication : public Application
      * \brief Callback for when the underlying socket is connected.
      * \param connectionSucceeded callback function passed to BulkSendApplication.
     */
-    void SetConnectCallback(Callback<void, Ptr<BulkSendApplication>> connectionSucceeded);
+    void SetConnectCallback(Callback<void, Ptr<BulkSendApplication>, Ptr<OutputStreamWrapper>, Ptr<OutputStreamWrapper>> connectionSucceeded);
+
+    void SetTraceStreams(Ptr<OutputStreamWrapper> fct, Ptr<OutputStreamWrapper> retr);
     
 
     /**
@@ -183,7 +186,9 @@ class BulkSendApplication : public Application
     Ptr<Packet> m_unsentPacket;          //!< Variable to cache unsent packet
     bool m_enableSeqTsSizeHeader{false}; //!< Enable or disable the SeqTsSizeHeader
 
-    Callback<void, Ptr<BulkSendApplication>> m_connectionSucceeded; //!< connection succeeded callback
+    Callback<void, Ptr<BulkSendApplication>, Ptr<OutputStreamWrapper>, Ptr<OutputStreamWrapper>> m_connectionSucceeded; //!< connection succeeded callback
+    Ptr<OutputStreamWrapper> m_fct;
+    Ptr<OutputStreamWrapper> m_retr;
 
     /// Traced Callback: sent packets
     TracedCallback<Ptr<const Packet>> m_txTrace;
