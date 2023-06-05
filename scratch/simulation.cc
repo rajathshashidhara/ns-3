@@ -49,7 +49,7 @@ ReTrace(Ptr<OutputStreamWrapper> stream, std::string context, uint32_t oldValue,
 static void
 SendTrace(Ptr<OutputStreamWrapper> stream, std::string context, SequenceNumber32 oldValue, SequenceNumber32 newValue)
 {   
-    *stream->GetStream() << context << " Send " << std::to_string(Simulator::Now().GetSeconds()) << " " << newValue << std::endl;
+    *stream->GetStream() << context << " Send " << std::to_string(Simulator::Now().GetNanoSeconds()) << " " << oldValue << std::endl;
 }
 
 /**
@@ -58,7 +58,7 @@ SendTrace(Ptr<OutputStreamWrapper> stream, std::string context, SequenceNumber32
 static void
 RecvTrace(Ptr<OutputStreamWrapper> stream, std::string context, SequenceNumber32 oldValue, SequenceNumber32 newValue)
 {   
-    *stream->GetStream() << context << " Recv " << std::to_string(Simulator::Now().GetSeconds()) << " " << newValue << std::endl;
+    *stream->GetStream() << context << " Recv " << std::to_string(Simulator::Now().GetNanoSeconds()) << " " << newValue << std::endl;
 }
 
 /**
@@ -94,7 +94,10 @@ flowHandler(ApplicationContainer apps, uint32_t size)
 {
     NS_LOG_INFO("Sending " << size);
     Ptr<BulkSendApplication> send = DynamicCast<BulkSendApplication>(apps.Get(0));
-    NS_ASSERT(send->GetConnected());
+    if (!send->GetConnected()) 
+    {
+        exit(1);
+    }
     send->SendSize(size);
 }
 
@@ -102,10 +105,12 @@ flowHandler(ApplicationContainer apps, uint32_t size)
 int
 main(int argc, char* argv[])
 {
-    double error_rate = 0.00;
-    uint8_t sack = 4;
+    double error_rate = 0.00000001;
+    uint32_t sack = 4;
     uint32_t data_retries = 5;
     uint32_t num_nodes = 16;
+    std::string testfile("small_traffic.txt");
+    std::string outputPrefix("test");
 
     //
     // Allow the user to override any of the defaults at
@@ -117,12 +122,14 @@ main(int argc, char* argv[])
     cmd.AddValue("Sack", "n-Sack", sack);
     cmd.AddValue("DataRetries", "TCP Max Retransmissions", data_retries);
     cmd.AddValue("Pods", "Number of Pods", num_nodes);
-    cmd.Parse(argc, argv);
+    cmd.AddValue("Input", "Input Test File", testfile);
+    cmd.AddValue("Output", "Output Trace Prefix", outputPrefix);
+    cmd.Parse(argc, argv); // TODO sack vs retr
 
     Config::SetDefault("ns3::TcpSocket::DataRetries", UintegerValue(data_retries));
     Config::SetDefault("ns3::TcpSocket::SndBufSize", UintegerValue(50000000));
     Config::SetDefault("ns3::TcpSocket::RcvBufSize", UintegerValue(50000000));
-    Config::SetDefault("ns3::TcpSocketBase::NSack", UintegerValue(sack));
+    Config::SetDefault("ns3::TcpRxBuffer::NSack", UintegerValue(sack));
 
     double pods = cbrt(4 * num_nodes);
     if (fmod(pods, 2) != 0)
@@ -170,8 +177,8 @@ main(int argc, char* argv[])
     NS_LOG_INFO("Create Applications.");
 
     AsciiTraceHelper ascii;
-    Ptr<OutputStreamWrapper> fct = ascii.CreateFileStream("scratch/traces/fct.tr");
-    Ptr<OutputStreamWrapper> re = ascii.CreateFileStream("scratch/traces/retr.tr");
+    Ptr<OutputStreamWrapper> fct = ascii.CreateFileStream("scratch/traces/" + outputPrefix + "_" + std::to_string(sack) + "sack_fct.tr");
+    Ptr<OutputStreamWrapper> re = ascii.CreateFileStream("scratch/traces/" + outputPrefix + "_" + std::to_string(sack) + "sack_retr.tr");
 
 
     // Create a 2D matrix where maxtrix[i][j] = ApplicationContainer.
@@ -223,7 +230,7 @@ main(int argc, char* argv[])
     //
 
     std::ifstream file;
-    file.open("traffic_gen/tmp_traffic.txt", std::ifstream::in);
+    file.open("traffic_gen/" + testfile, std::ifstream::in);
 
     std::string row;
     while (std::getline(file, row))
@@ -248,7 +255,7 @@ main(int argc, char* argv[])
     //
 
     NS_LOG_INFO("Run Simulation.");
-    Simulator::Stop(Seconds(5000.0));
+    Simulator::Stop(Seconds(50000.0));
     Simulator::Run();
     Simulator::Destroy();
     NS_LOG_INFO("Done.");

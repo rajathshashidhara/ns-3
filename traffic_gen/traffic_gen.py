@@ -74,7 +74,6 @@ if __name__ == "__main__":
 	avg_inter_arrival = 1/(bandwidth*load/8./avg)*1000000000
 	n_flow_estimate = int(time / avg_inter_arrival * nhost)
 	n_flow = 0
-	ofile.write("%d \n"%n_flow_estimate)
 	host_list = [(base_t + int(poisson(avg_inter_arrival)), i) for i in range(nhost)]
 	heapq.heapify(host_list)
 	while len(host_list) > 0:
@@ -93,8 +92,6 @@ if __name__ == "__main__":
 			n_flow += 1;
 			ofile.write("%d %d 3 100 %d %.9f\n"%(src, dst, size, t * 1e-9))
 			heapq.heapreplace(host_list, (t + inter_t, src))
-	ofile.seek(0)
-	ofile.write("%d"%n_flow)
 	ofile.close()
 
 '''

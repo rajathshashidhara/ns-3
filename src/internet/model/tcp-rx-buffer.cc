@@ -35,7 +35,12 @@ TcpRxBuffer::GetTypeId()
     static TypeId tid = TypeId("ns3::TcpRxBuffer")
                             .SetParent<Object>()
                             .SetGroupName("Internet")
-                            .AddConstructor<TcpRxBuffer>()
+                            .AddConstructor<TcpRxBuffer>()            
+                            .AddAttribute("NSack",
+                                "Max Sack",
+                                UintegerValue(4),
+                                MakeUintegerAccessor(&TcpRxBuffer::m_nsack),
+                                MakeUintegerChecker<uint32_t>())
                             .AddTraceSource("NextRxSequence",
                                             "Next sequence number expected (RCV.NXT)",
                                             MakeTraceSourceAccessor(&TcpRxBuffer::m_nextRxSeq),

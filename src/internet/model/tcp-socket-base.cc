@@ -98,11 +98,6 @@ TcpSocketBase::GetTypeId()
                           UintegerValue(65535),
                           MakeUintegerAccessor(&TcpSocketBase::m_maxWinSize),
                           MakeUintegerChecker<uint16_t>())
-            .AddAttribute("NSack",
-                          "Max Sack",
-                          UintegerValue(4),
-                          MakeUintegerAccessor(&TcpSocketBase::m_nsack),
-                          MakeUintegerChecker<uint8_t>())
             .AddAttribute("IcmpCallback",
                           "Callback invoked whenever an icmp error is received on this socket.",
                           CallbackValue(),
@@ -285,7 +280,6 @@ TcpSocketBase::TcpSocketBase()
     m_rateOps = CreateObject<TcpRateLinux>();
 
     m_tcb->m_rxBuffer = CreateObject<TcpRxBuffer>();
-    m_tcb->m_rxBuffer->SetNSack(m_nsack);
 
     m_tcb->m_pacingRate = m_tcb->m_maxPacingRate;
     m_pacingTimer.SetFunction(&TcpSocketBase::NotifyPacingPerformed, this);

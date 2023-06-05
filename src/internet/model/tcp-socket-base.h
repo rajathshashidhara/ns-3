@@ -1298,7 +1298,6 @@ class TcpSocketBase : public TcpSocket
     uint32_t m_synRetries{0};    //!< Number of connection attempts
     uint32_t m_dataRetrCount{0}; //!< Count of remaining data retransmission attempts
     uint32_t m_dataRetries{0};   //!< Number of data retransmission attempts
-    uint8_t m_nsack{4};          //!< The maximum number of allowed SACK segments
     
     // Timeouts
     TracedValue<Time> m_rto{Seconds(0.0)};   //!< Retransmit timeout
