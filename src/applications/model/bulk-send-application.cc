@@ -144,6 +144,12 @@ BulkSendApplication::GetLocal() const
     return m_local;
 }
 
+uint64_t
+BulkSendApplication::GetTotalTx() const
+{
+    return m_totBytes;
+}
+
 void
 BulkSendApplication::DoDispose()
 {
@@ -294,6 +300,7 @@ BulkSendApplication::SendSize(uint32_t size)
         if ((unsigned)actual == toSend)
         {
             sentBytes += actual;
+            m_totBytes += actual;
             m_unsentPacket = nullptr;
         }
         else if (actual == -1)
@@ -315,6 +322,7 @@ BulkSendApplication::SendSize(uint32_t size)
             Ptr<Packet> sent = packet->CreateFragment(0, actual);
             Ptr<Packet> unsent = packet->CreateFragment(actual, (toSend - (unsigned)actual));
             sentBytes += actual;
+            m_totBytes += actual;
             m_txTrace(sent);
             m_unsentPacket = unsent;
             break;
@@ -330,22 +338,22 @@ void
 BulkSendApplication::SendData(const Address& from, const Address& to)
 {
     NS_LOG_FUNCTION(this);
-
-    // Set total bytes sent to 0 each time we SendData, and send until we've
-    // sent the entire flow.
-    m_totBytes = 0;
-    while (m_totBytes < m_maxBytes)
+ 
+    while (m_maxBytes == 0 || m_totBytes < m_maxBytes)
     { // Time to send more
-
-        uint64_t toSend = m_maxBytes;
+ 
+        // uint64_t to allow the comparison later.
+        // the result is in a uint32_t range anyway, because
+        // m_sendSize is uint32_t.
+        uint64_t toSend = m_sendSize;
         // Make sure we don't send too many
         if (m_maxBytes > 0)
         {
             toSend = std::min(toSend, m_maxBytes - m_totBytes);
         }
-
+ 
         NS_LOG_LOGIC("sending packet at " << Simulator::Now());
-
+ 
         Ptr<Packet> packet;
         if (m_unsentPacket)
         {
@@ -367,7 +375,7 @@ BulkSendApplication::SendData(const Address& from, const Address& to)
         {
             packet = Create<Packet>(toSend);
         }
-
+ 
         int actual = m_socket->Send(packet);
         if ((unsigned)actual == toSend)
         {
@@ -403,14 +411,12 @@ BulkSendApplication::SendData(const Address& from, const Address& to)
             NS_FATAL_ERROR("Unexpected return value from m_socket->Send ()");
         }
     }
-    
     // Check if time to close (all sent)
-    // if (m_totBytes == m_maxBytes && m_connected)
-    // {
-    //     m_socket->Close();
-    //     m_connected = false;
-    // }
-    // ^ don't close the socket once we finish one flow. Use StopApplication() to close the socket.
+    if (m_totBytes == m_maxBytes && m_connected)
+    {
+        m_socket->Close();
+        m_connected = false;
+    }
 }
 
 void

@@ -1,0 +1,7 @@
+# Run test case.
+./ns3 configure --build-profile=optimized
+./ns3 build
+./ns3 run scratch/simulation -- --Sack=4 --Input="small_traffic.txt" --Output="test"
+
+# No seq num up to 39,661,249 (8 digits)
+grep -E '\b[0-9]{8}\b' scratch/traces/test_4sack_fct.tr | grep "^14"

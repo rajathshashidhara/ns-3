@@ -239,7 +239,8 @@ main(int argc, char* argv[])
         std::istringstream iss(row);
         std::string value;
 
-        while (std::getline(iss, value, ' ')) {
+        while (std::getline(iss, value, ' ')) 
+        {
             params.push_back(value);
         }
 
@@ -255,7 +256,7 @@ main(int argc, char* argv[])
     //
 
     NS_LOG_INFO("Run Simulation.");
-    Simulator::Stop(Seconds(50000.0));
+    Simulator::Stop(Hours(24));
     Simulator::Run();
     Simulator::Destroy();
     NS_LOG_INFO("Done.");
@@ -270,14 +271,16 @@ main(int argc, char* argv[])
             if (i != j)
             {
                 ApplicationContainer apps = matrix[i][j];
-                Ptr<PacketSink> sink1 = DynamicCast<PacketSink>(apps.Get(1));
-                nodes[j] += sink1->GetTotalRx();
+                Ptr<BulkSendApplication> source1 = DynamicCast<BulkSendApplication>(apps.Get(0));
+                nodes[i] += source1->GetTotalTx();
             }  
         }
     }
 
-    for (uint32_t i = 0; i < nodes.size(); i++) {
-        std::cout << "Node " << std::to_string(i) << " Received " << std::to_string(nodes[i]) << " Total Bytes" << std::endl;
+    Ptr<OutputStreamWrapper> out = ascii.CreateFileStream("scratch/traces/" + outputPrefix + "_" + std::to_string(sack) + "sack_out.tr");
+    for (uint32_t i = 0; i < nodes.size(); i++) 
+    {
+        *out->GetStream() << "Node " << std::to_string(i) << " Sent " << std::to_string(nodes[i]) << " Total Bytes" << std::endl;
     }
 
     return 0;

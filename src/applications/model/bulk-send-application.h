@@ -146,6 +146,8 @@ class BulkSendApplication : public Application
     */
     bool GetConnected() const;
 
+    uint64_t GetTotalTx() const;
+
     /**
      * \brief Callback for when the underlying socket is connected.
      * \param connectionSucceeded callback function passed to BulkSendApplication.
