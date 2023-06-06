@@ -5,3 +5,5 @@
 
 # No seq num up to 39,661,249 (8 digits)
 grep -E '\b[0-9]{8}\b' scratch/traces/test_4sack_fct.tr | grep "^14"
+
+grep -E '^14 Send.*\b1$' scratch/traces/test_4sack_fct.tr
