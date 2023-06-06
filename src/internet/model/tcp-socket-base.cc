@@ -193,6 +193,10 @@ TcpSocketBase::GetTypeId()
                             "TCP state",
                             MakeTraceSourceAccessor(&TcpSocketBase::m_state),
                             "ns3::TcpStatesTracedValueCallback")
+            .AddTraceSource("RetransmissionsRemain",
+                            "TCP state",
+                            MakeTraceSourceAccessor(&TcpSocketBase::m_dataRetrCountTrace),
+                            "ns3::TracedValueCallback::Uint32")
             .AddTraceSource("CongState",
                             "TCP Congestion machine state",
                             MakeTraceSourceAccessor(&TcpSocketBase::m_congStateTrace),
@@ -3778,6 +3782,7 @@ TcpSocketBase::ReTxTimeout()
     }
     else
     {
+        UpdateRetransmit(m_dataRetrCount, m_dataRetrCount - 1);
         --m_dataRetrCount;
     }
 
@@ -3886,6 +3891,7 @@ TcpSocketBase::LastAckTimeout()
             DeallocateEndPoint();
             return;
         }
+        UpdateRetransmit(m_dataRetrCount, m_dataRetrCount - 1);
         m_dataRetrCount--;
         SendEmptyPacket(TcpHeader::FIN | TcpHeader::ACK);
         NS_LOG_LOGIC("TcpSocketBase " << this << " rescheduling LATO1");
@@ -4511,6 +4517,12 @@ void
 TcpSocketBase::UpdateHighTxMark(SequenceNumber32 oldValue, SequenceNumber32 newValue) const
 {
     m_highTxMarkTrace(oldValue, newValue);
+}
+
+void
+TcpSocketBase::UpdateRetransmit(uint32_t oldValue, uint32_t newValue) const
+{
+    m_dataRetrCountTrace(oldValue, newValue);
 }
 
 void

@@ -35,7 +35,12 @@ TcpRxBuffer::GetTypeId()
     static TypeId tid = TypeId("ns3::TcpRxBuffer")
                             .SetParent<Object>()
                             .SetGroupName("Internet")
-                            .AddConstructor<TcpRxBuffer>()
+                            .AddConstructor<TcpRxBuffer>()            
+                            .AddAttribute("NSack",
+                                "Max Sack",
+                                UintegerValue(4),
+                                MakeUintegerAccessor(&TcpRxBuffer::m_nsack),
+                                MakeUintegerChecker<uint32_t>())
                             .AddTraceSource("NextRxSequence",
                                             "Next sequence number expected (RCV.NXT)",
                                             MakeTraceSourceAccessor(&TcpRxBuffer::m_nextRxSeq),
@@ -73,6 +78,12 @@ void
 TcpRxBuffer::SetNextRxSequence(const SequenceNumber32& s)
 {
     m_nextRxSeq = s;
+}
+
+void 
+TcpRxBuffer::SetNSack(uint8_t nsack)
+{
+    m_nsack = nsack;
 }
 
 uint32_t
@@ -337,7 +348,7 @@ TcpRxBuffer::UpdateSackList(const SequenceNumber32& head, const SequenceNumber32
 
     // Since the maximum blocks that fits into a TCP header are 4, there's no
     // point on maintaining the others.
-    if (m_sackList.size() > 4)
+    if (m_sackList.size() > m_nsack)
     {
         m_sackList.pop_back();
     }

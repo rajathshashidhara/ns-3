@@ -26,6 +26,7 @@
 #include "ns3/ptr.h"
 #include "ns3/seq-ts-size-header.h"
 #include "ns3/traced-callback.h"
+#include "ns3/output-stream-wrapper.h"
 
 namespace ns3
 {
@@ -95,16 +96,76 @@ class BulkSendApplication : public Application
      * up to maxBytes. The value zero for maxBytes means that
      * there is no upper bound; i.e. data is sent until the application
      * or simulation is stopped.
+     * 
+     * For this implementation, we change this to the size of the flow to send
+     * each time.
      *
-     * \param maxBytes the upper bound of bytes to send
+     * \param maxBytes the upper bound of bytes to send.
      */
     void SetMaxBytes(uint64_t maxBytes);
 
+    /**
+     * \brief Indicate the connection has succeeded.
+     * 
+     * Set this to true once we finish setting up our trace.
+     * 
+     * \param connect connection status.
+    */
+    void SetConnected(bool connect);
+
+    /**
+     * \brief Send data until the L4 transmission buffer is full.
+     * \param from From address
+     * \param to To address
+     */
+    void SendData(const Address& from, const Address& to);
+
+    void SendSize(uint32_t size);
+    
     /**
      * \brief Get the socket this application is attached to.
      * \return pointer to associated socket
      */
     Ptr<Socket> GetSocket() const;
+
+    /**
+     * \brief Get the receiver (who we're sending to).
+     * \return address of the received.
+    */
+    Address GetPeer() const;
+
+    /**
+     * \brief Get the sender (this).
+     * \return address of the node this is installed on.
+    */
+    Address GetLocal() const;
+
+    /**
+     * \brief Get the connection status of the socket.
+     * \return true if connected, false otherwise.
+    */
+    bool GetConnected() const;
+
+    uint64_t GetTotalTx() const;
+
+    /**
+     * \brief Callback for when the underlying socket is connected.
+     * \param connectionSucceeded callback function passed to BulkSendApplication.
+    */
+    void SetConnectCallback(Callback<void, Ptr<BulkSendApplication>, Ptr<OutputStreamWrapper>, Ptr<OutputStreamWrapper>> connectionSucceeded);
+
+    void SetTraceStreams(Ptr<OutputStreamWrapper> fct, Ptr<OutputStreamWrapper> retr);
+    
+
+    /**
+     * \brief Send more data as soon as some has been transmitted.
+     *
+     * Used in socket's SetSendCallback - params are forced by it.
+     *
+     * \param socket socket to use
+     * \param unused actually unused
+     */
+    void DataSend(Ptr<Socket> socket, uint32_t unused);
 
   protected:
     void DoDispose() override;
@@ -114,12 +175,6 @@ class BulkSendApplication : public Application
     void StartApplication() override; // Called at time specified by Start
     void StopApplication() override;  // Called at time specified by Stop
 
-    /**
-     * \brief Send data until the L4 transmission buffer is full.
-     * \param from From address
-     * \param to To address
-     */
-    void SendData(const Address& from, const Address& to);
 
     Ptr<Socket> m_socket;                //!< Associated socket
     Address m_peer;                      //!< Peer address
@@ -132,6 +187,10 @@ class BulkSendApplication : public Application
     uint32_t m_seq{0};                   //!< Sequence
     Ptr<Packet> m_unsentPacket;          //!< Variable to cache unsent packet
     bool m_enableSeqTsSizeHeader{false}; //!< Enable or disable the SeqTsSizeHeader
+
+    Callback<void, Ptr<BulkSendApplication>, Ptr<OutputStreamWrapper>, Ptr<OutputStreamWrapper>> m_connectionSucceeded; //!< connection succeeded callback
+    Ptr<OutputStreamWrapper> m_fct;
+    Ptr<OutputStreamWrapper> m_retr;
 
     /// Traced Callback: sent packets
     TracedCallback<Ptr<const Packet>> m_txTrace;
@@ -152,15 +211,6 @@ class BulkSendApplication : public Application
      * \param socket the connected socket
      */
     void ConnectionFailed(Ptr<Socket> socket);
-    /**
-     * \brief Send more data as soon as some has been transmitted.
-     *
-     * Used in socket's SetSendCallback - params are forced by it.
-     *
-     * \param socket socket to use
-     * \param unused actually unused
-     */
-    void DataSend(Ptr<Socket> socket, uint32_t unused);
 };
 
 } // namespace ns3
